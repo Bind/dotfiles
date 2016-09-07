@@ -1,0 +1,1 @@
+Shamelessly ripped off from [Pablo Alonso](https://github.com/pabloalonsos/spawncamping-dangerzone)

@@ -10,4 +10,3 @@ brew 'wget'
 
 cask 'atom'
 cask 'slack'
-cask 'sublime-text3'
