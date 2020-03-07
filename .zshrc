@@ -64,12 +64,18 @@ ZSH_THEME="robbyrussell"
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
   git
+  kubectl
+  helm
+  aws
 )
 
 source $ZSH/oh-my-zsh.sh
 source ~/.dotfiles/.profile.sh
 source ~/.dotfiles/.prompt.sh
 source ~/.dotfiles/.python.sh
+source ~/.dotfiles/.android.sh
+source ~/.dotfiles/.kubectl.sh
+source ~/.dotfiles/.alias.sh
 neofetch
 
 # User configuration
@@ -107,3 +113,6 @@ neofetch
 # tabtab source for sls package
 # uninstall by removing these lines or running `tabtab uninstall sls`
 [[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.zsh
+# tabtab source for slss package
+# uninstall by removing these lines or running `tabtab uninstall slss`
+[[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.zsh
