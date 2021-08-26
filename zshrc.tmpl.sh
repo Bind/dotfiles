@@ -3,7 +3,7 @@
 
 # Path to your oh-my-zsh installation.
 export ZSH="/Users/douglasbinder/.oh-my-zsh"
-
+export MAILCHECK=0
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
@@ -66,17 +66,26 @@ plugins=(
   git
   kubectl
   helm
+  docker
+  docker-compose
   aws
+  z
 )
-
+DOTFILES_DIR=/.dotfiles/alias
 source $ZSH/oh-my-zsh.sh
-source ~/.dotfiles/.profile.sh
-source ~/.dotfiles/.prompt.sh
-source ~/.dotfiles/.python.sh
-source ~/.dotfiles/.android.sh
-source ~/.dotfiles/.kubectl.sh
-source ~/.dotfiles/.alias.sh
-neofetch
+for f in "$DOTFILES_DIR"/*
+do 
+  source $f
+done
+
+SCRIPTS_DIR=~/.dotfiles/scripts
+for f in "$SCRIPTS_DIR"/*
+do 
+  alias $(basename $f | cut -f 1 -d '.')=$f
+done
+
+
+# neofetch
 
 # User configuration
 
@@ -116,3 +125,18 @@ neofetch
 # tabtab source for slss package
 # uninstall by removing these lines or running `tabtab uninstall slss`
 [[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.zsh
+
+export E="/volumes/External"
+export EHOME=$E/$HOME
+
+# ln -s $EHOME/⁨Library⁩/⁨Containers⁩/com.docker.docker /Users/douglasbinder/Library/Containers
+
+export PATH=".:/Applications/MAMP/Library/bin:~/bin:${PATH}"
+export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/Users/douglasbinder/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/douglasbinder/google-cloud-sdk/path.zsh.inc'; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/Users/douglasbinder/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/douglasbinder/google-cloud-sdk/completion.zsh.inc'; fi
+if [ -e /Users/douglasbinder/.nix-profile/etc/profile.d/nix.sh ]; then . /Users/douglasbinder/.nix-profile/etc/profile.d/nix.sh; fi # added by Nix installer

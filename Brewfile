@@ -4,7 +4,6 @@ cask_args appdir: '/Applications'
 
 tap 'homebrew/bundle'
 
-
 brew 'openssl'
 brew 'node'
 brew 'postgresql'
