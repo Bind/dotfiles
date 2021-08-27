@@ -71,7 +71,8 @@ plugins=(
   aws
   z
 )
-DOTFILES_DIR=~/dotfiles2/aliases
+
+DOTFILES_DIR=~/.dotfiles/aliases
 source $ZSH/oh-my-zsh.sh
 for f in "$DOTFILES_DIR"/*
 do 

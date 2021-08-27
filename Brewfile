@@ -6,15 +6,17 @@ tap 'homebrew/bundle'
 
 brew 'openssl'
 brew 'node'
-brew 'postgresql'
 brew 'wget'
 brew 'neofetch'
-brew 'awscli'
-brew 'awsebcli'
+brew 'zsh'
+brew 'n'
 
-cask 'slack'
+
 cask 'visual-studio-code'
 cask 'spotify'
-cask 'sketch'
+cask 'discord'
 cask 'spectacle'
-cask 'karabiner-elements'
+cask 'slack'
+cask "google-chrome"
+cask '1password'
+cask 'alfred'

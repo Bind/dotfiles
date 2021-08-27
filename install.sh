@@ -20,7 +20,7 @@ do
   ln $f $DOTFILES_DIR/$filename
 done
 
-sed 's/[[DOTFILES_DIR]]/${DOTFILES_DIR}/g' ./zshrc.tmpl.sh | tee ~/.zshrc
+# sed 's/[[DOTFILES_DIR]]/${DOTFILES_DIR}/g' ./zshrc.tmpl.sh | tee ~/.zshrc
 
 # ln .profile.sh ~/.dotfiles/.profile.sh
 # ln .prompt.sh ~/.dotfiles/.prompt.sh
