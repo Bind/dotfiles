@@ -71,14 +71,14 @@ plugins=(
   aws
   z
 )
-DOTFILES_DIR=/.dotfiles/alias
+DOTFILES_DIR=~/dotfiles2/aliases
 source $ZSH/oh-my-zsh.sh
 for f in "$DOTFILES_DIR"/*
 do 
   source $f
 done
 
-SCRIPTS_DIR=~/.dotfiles/scripts
+SCRIPTS_DIR=~/dotfiles2/scripts
 for f in "$SCRIPTS_DIR"/*
 do 
   alias $(basename $f | cut -f 1 -d '.')=$f
