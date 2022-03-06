@@ -29,7 +29,7 @@ if [[ "$currenttime" < "18" ]] && [[ "$currenttime" > "09" ]] && [[ $MODE == 'pl
     exit 
 fi 
 
-echo Copying host file from ~/dotfiles/templates/web-mode/host-$MODE to /etc/hosts
+echo Copying host file from ~/.dotfiles/templates/web-mode/host-$MODE to /etc/hosts
 
 sudo cp ~/dotfiles/templates/web-mode/host-$MODE /etc/hosts
 sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
