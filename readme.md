@@ -1,7 +1,5 @@
 # Setup Dotfiles on a new machine
 
-`git clone`
-
+run `git clone` in your users root directory
 `cd dotfiles`
-
-`./setup.sh`
+`./install.sh`
