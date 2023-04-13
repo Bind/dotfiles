@@ -5,12 +5,7 @@ export MAILCHECK=0
 ZSH_THEME="robbyrussell"
 
 plugins=(
-  git
-  kubectl
-  helm
-  docker
-  docker-compose
-  aws
+  git # https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/git
   z
 )
 
