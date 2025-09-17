@@ -19,11 +19,11 @@ do
   source $f
 done
 
-# Iterate over files in scripts dir
+# Source all scripts (they now all define functions)
 SCRIPTS_DIR="${DOTFILES_DIR}/scripts"
 for f in "$SCRIPTS_DIR"/*
 do 
-  alias $(basename $f | cut -f 1 -d '.')=$f
+  source "$f"
 done
 
 export E="/volumes/External"
