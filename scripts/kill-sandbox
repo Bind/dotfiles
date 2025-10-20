@@ -1,0 +1,6 @@
+#!/bin/bash
+
+set -euo pipefail
+
+echo "Killing sandbox tmux session..."
+tmux kill-session -t sandbox

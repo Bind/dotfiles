@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+    echo "Usage: wt <branch-name>" >&2
+    echo "Creates or switches to a git worktree for the specified branch" >&2
+    exit 1
+fi
+
+BRANCH_NAME="$1"
+
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo "Error: Not in a git repository" >&2
+    exit 1
+fi
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+WORKTREE_PATH="$REPO_ROOT/../$BRANCH_NAME"
+
+if [[ -d "$WORKTREE_PATH" ]]; then
+    echo "Worktree already exists at $WORKTREE_PATH"
+    cd "$WORKTREE_PATH"
+else
+    echo "Creating new worktree for branch '$BRANCH_NAME' at $WORKTREE_PATH"
+    
+    if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
+        git worktree add "$WORKTREE_PATH" "$BRANCH_NAME"
+    elif git show-ref --verify --quiet "refs/remotes/origin/$BRANCH_NAME"; then
+        git worktree add "$WORKTREE_PATH" "origin/$BRANCH_NAME"
+    else
+        git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"
+    fi
+    
+    cd "$WORKTREE_PATH"
+    echo "Successfully created and switched to worktree: $WORKTREE_PATH"
+fi

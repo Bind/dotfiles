@@ -19,12 +19,8 @@ do
   source $f
 done
 
-# Source all scripts (they now all define functions)
-SCRIPTS_DIR="${DOTFILES_DIR}/scripts"
-for f in "$SCRIPTS_DIR"/*
-do 
-  source "$f"
-done
+# Add scripts directory to PATH for direct execution
+export PATH="${DOTFILES_DIR}/scripts:$PATH"
 
 export E="/volumes/External"
 export EHOME=$E/$HOME

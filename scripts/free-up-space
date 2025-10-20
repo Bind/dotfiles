@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -euo pipefail
+
+echo "This could take awhile..."
+
+echo "Updating and cleaning Homebrew..."
+brew update && brew upgrade && brew cleanup
+
+echo "Cleaning up iOS simulators..."
+xcrun simctl delete unavailable
+
+echo "Removing Xcode archives and derived data..."
+rm -rf ~/Library/Developer/Xcode/Archives
+rm -rf ~/Library/Developer/Xcode/DerivedData
+rm -rf ~/Library/Developer/Xcode/iOS\ Device\ Logs/
+
+echo "Cleanup complete!"

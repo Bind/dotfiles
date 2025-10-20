@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+    echo "Usage: onport <port>" >&2
+    exit 1
+fi
+
+lsof -i ":$1"
