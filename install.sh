@@ -93,25 +93,33 @@ setup_zsh() {
 
 # Setup stow packages for configuration files
 setup_stow_packages() {
-    cd stow
+    cd config
     
-    # Available packages
-    PACKAGES=("nvim" "ghostty" "tmux")
+    # Available packages with their target directories
+    declare -A PACKAGES=(
+        ["nvim"]="$HOME/.config/nvim"
+        ["ghostty"]="$HOME/.config/ghostty"
+        ["tmux"]="$HOME/.config/tmux"
+    )
     
-    for package in "${PACKAGES[@]}"; do
+    for package in "${!PACKAGES[@]}"; do
+        target_path="${PACKAGES[$package]}"
+        
         if [[ -d "$package" ]]; then
             log "Installing $package configuration..."
             
             # Check for existing config and back it up
-            config_path="$HOME/.config/$package"
-            if [[ -e "$config_path" ]] && [[ ! -L "$config_path" ]]; then
-                warning "Existing $package config found, backing up to ${config_path}.bak"
-                mv "$config_path" "${config_path}.bak"
+            if [[ -e "$target_path" ]] && [[ ! -L "$target_path" ]]; then
+                warning "Existing $package config found, backing up to ${target_path}.bak"
+                mv "$target_path" "${target_path}.bak"
             fi
             
-            # Apply stow package
-            if stow -t "$HOME" "$package"; then
-                success "$package configuration linked"
+            # Create parent directory if needed
+            mkdir -p "$(dirname "$target_path")"
+            
+            # Apply stow package to specific target directory
+            if stow -t "$target_path" "$package"; then
+                success "$package configuration linked to $target_path"
             else
                 error "Failed to link $package configuration"
             fi
@@ -121,7 +129,7 @@ setup_stow_packages() {
     done
     
     cd ..
-    success "Stow packages installation complete"
+    success "Config packages installation complete"
 }
 
 # Run main function

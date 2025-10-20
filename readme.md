@@ -10,9 +10,9 @@ cd ~/dotfiles
 ## What the install script does:
 1. **Zsh Configuration** - Sets up ~/.zshrc with dynamic paths
 2. **Config Management** - Uses stow to link configuration files:
-   - nvim → ~/.config/nvim
-   - ghostty → ~/.config/ghostty  
-   - tmux → ~/.config/tmux
+   - `config/nvim/` → `~/.config/nvim/`
+   - `config/ghostty/` → `~/.config/ghostty/`  
+   - `config/tmux/` → `~/.config/tmux/`
 3. **Brew Packages** - Optionally installs packages from Brewfile
 
 ## Dependencies
@@ -21,14 +21,33 @@ cd ~/dotfiles
 
 ## Manual Management
 ```bash
-cd ~/dotfiles/stow
+cd ~/dotfiles/config
 
-# Link all configs
-stow -t ~ nvim ghostty tmux
+# Link individual configs to their target directories
+stow -t ~/.config/nvim nvim
+stow -t ~/.config/ghostty ghostty  
+stow -t ~/.config/tmux tmux
 
-# Link individual config
-stow -t ~ nvim
+# Unlink configs
+stow -t ~/.config/nvim -D nvim
+stow -t ~/.config/ghostty -D ghostty
+stow -t ~/.config/tmux -D tmux
+```
 
-# Unlink config
-stow -t ~ -D nvim
+## File Structure
+```
+~/dotfiles/
+├── config/              # Configuration packages (clean paths!)
+│   ├── nvim/           # config/nvim/lua/plugins.lua
+│   │   ├── init.lua
+│   │   └── lua/
+│   ├── ghostty/        # config/ghostty/config
+│   │   └── config
+│   └── tmux/           # config/tmux/tmux.conf
+│       ├── tmux.conf
+│       └── plugins/
+│           └── catppuccin/
+├── aliases/            # Shell aliases
+├── scripts/            # Utility functions  
+└── Brewfile           # Package dependencies
 ```
