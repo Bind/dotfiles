@@ -1,14 +1,20 @@
 cask_args appdir: '/Applications'
 
 brew 'openssl'
-brew 'node'
 brew 'wget'
-brew 'neofetch'
 brew 'zsh'
 brew 'n'
+brew 'jq'
+brew 'yq'
+brew 'stow'
+brew 'pass'
+brew 'neovim'
+brew 'gh'
+brew 'bun'
+brew 'ripgrep'
+brew 'fzf'
 
 
-cask 'visual-studio-code'
 cask 'spotify'
 cask 'discord'
 cask 'slack'
