@@ -13,7 +13,7 @@ brew 'gh'
 brew 'bun'
 brew 'ripgrep'
 brew 'fzf'
-
+brew 'lazygit'
 
 cask 'spotify'
 cask 'discord'

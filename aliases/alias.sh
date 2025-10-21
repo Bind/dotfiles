@@ -8,3 +8,5 @@ alias trunk="cd ~/workspace/tm_trunk"
 alias dots="nvim ~/dotfiles"
 alias conf-nvim="nvim ~/.config/nvim"
 alias conf-ghostty="nvim ~/.config/ghostty"
+alias lg="lazy-git"
+
