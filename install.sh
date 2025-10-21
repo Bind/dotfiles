@@ -95,15 +95,9 @@ setup_zsh() {
 setup_stow_packages() {
     cd config
     
-    # Available packages with their target directories
-    declare -A PACKAGES=(
-        ["nvim"]="$HOME/.config/nvim"
-        ["ghostty"]="$HOME/.config/ghostty"
-        ["tmux"]="$HOME/.config/tmux"
-    )
-    
-    for package in "${!PACKAGES[@]}"; do
-        target_path="${PACKAGES[$package]}"
+    # Read packages from YAML configuration
+    for package in $(yq eval '.packages | keys | .[]' ../stow-packages.yml); do
+        target_path=$(eval echo $(yq eval ".packages.${package}.target" ../stow-packages.yml))
         
         if [[ -d "$package" ]]; then
             log "Installing $package configuration..."

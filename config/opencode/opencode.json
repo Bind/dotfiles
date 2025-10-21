@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "theme": "opencode",
+  "model": "anthropic/claude-sonnet-4-20250514",
+  "small_model": "anthropic/claude-3-5-haiku-20241022",
+  "autoupdate": true,
+  "tools": {
+    "write": true,
+    "edit": true,
+    "bash": true,
+    "read": true,
+    "list": true,
+    "grep": true,
+    "glob": true
+  },
+  "permission": {
+    "write": "allow",
+    "edit": "allow",
+    "bash": "allow"
+  }
+}

@@ -1,0 +1,9 @@
+packages:
+  nvim:
+    target: "$HOME/.config/nvim"
+  ghostty:
+    target: "$HOME/.config/ghostty"
+  tmux:
+    target: "$HOME/.config/tmux"
+  opencode:
+    target: "$HOME/.config/opencode"
