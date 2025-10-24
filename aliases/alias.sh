@@ -8,5 +8,10 @@ alias trunk="cd ~/workspace/tm_trunk"
 alias dots="nvim ~/dotfiles"
 alias conf-nvim="nvim ~/.config/nvim"
 alias conf-ghostty="nvim ~/.config/ghostty"
-alias lg="lazy-git"
+alias lg="lazygit"
+
+# Git worktree management with auto-cd
+wt() {
+    source "${DOTFILES_DIR}/scripts/wt" "$@"
+}
 

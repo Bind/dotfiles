@@ -2,36 +2,209 @@
 
 set -euo pipefail
 
-if [[ $# -ne 1 ]]; then
-    echo "Usage: wt <branch-name>" >&2
-    echo "Creates or switches to a git worktree for the specified branch" >&2
+usage() {
+    cat << 'EOF'
+Usage: 
+  wt <branch-name>     Create or switch to worktree with config symlinks
+  wt boot <git-repo>   Bootstrap project structure from git repository  
+  wt eject             Convert symlinks to real files in current worktree
+EOF
     exit 1
-fi
+}
 
-BRANCH_NAME="$1"
+find_project_root() {
+    local current_dir="$PWD"
+    while [[ "$current_dir" != "/" ]]; do
+        if [[ -f "$current_dir/worktree-config.yml" ]]; then
+            echo "$current_dir"
+            return 0
+        fi
+        current_dir="$(dirname "$current_dir")"
+    done
+    return 1
+}
 
-if ! git rev-parse --git-dir > /dev/null 2>&1; then
-    echo "Error: Not in a git repository" >&2
-    exit 1
-fi
+parse_config_files() {
+    local config_path="$1"
+    [[ -f "$config_path" ]] || return 0
+    yq '.files[]? | [.source, .dest] | @tsv' "$config_path" 2>/dev/null || true
+}
 
-REPO_ROOT=$(git rev-parse --show-toplevel)
-WORKTREE_PATH="$REPO_ROOT/../$BRANCH_NAME"
-
-if [[ -d "$WORKTREE_PATH" ]]; then
-    echo "Worktree already exists at $WORKTREE_PATH"
-    cd "$WORKTREE_PATH"
-else
-    echo "Creating new worktree for branch '$BRANCH_NAME' at $WORKTREE_PATH"
+create_symlink() {
+    local source_path="$1"
+    local dest_path="$2"
+    local worktree_path="$3"
     
-    if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
-        git worktree add "$WORKTREE_PATH" "$BRANCH_NAME"
-    elif git show-ref --verify --quiet "refs/remotes/origin/$BRANCH_NAME"; then
-        git worktree add "$WORKTREE_PATH" "origin/$BRANCH_NAME"
+    local full_source="$source_path"
+    local full_dest="$worktree_path/$dest_path"
+    
+    [[ -f "$full_source" ]] || {
+        echo "Warning: Source file '$source_path' not found, skipping"
+        return 0
+    }
+    
+    local dest_dir="$(dirname "$full_dest")"
+    mkdir -p "$dest_dir"
+    
+    local relative_source="$(python3 -c "import os.path; print(os.path.relpath('$full_source', '$dest_dir'))")"
+    
+    ln -sf "$relative_source" "$full_dest"
+    echo "Linked: $dest_path -> $relative_source"
+}
+
+apply_config_symlinks() {
+    local project_root="$1"
+    local worktree_path="$2"
+    local config_file="$project_root/worktree-config.yml"
+    
+    [[ -f "$config_file" ]] || {
+        echo "No worktree-config.yml found, skipping symlinks"
+        return 0
+    }
+    
+    echo "Applying config symlinks..."
+    
+    while IFS=$'\t' read -r source dest; do
+        [[ -n "$source" && -n "$dest" ]] || continue
+        create_symlink "$project_root/$source" "$dest" "$worktree_path"
+    done < <(parse_config_files "$config_file")
+}
+
+eject_config_files() {
+    local project_root
+    project_root="$(find_project_root)" || {
+        echo "Error: Not in a worktree project (no worktree-config.yml found)" >&2
+        exit 1
+    }
+    
+    local config_file="$project_root/worktree-config.yml"
+    [[ -f "$config_file" ]] || {
+        echo "No worktree-config.yml found"
+        return 0
+    }
+    
+    echo "Ejecting symlinks to real files..."
+    
+    while IFS=$'\t' read -r source dest; do
+        [[ -n "$source" && -n "$dest" ]] || continue
+        local dest_file="$PWD/$dest"
+        
+        [[ -L "$dest_file" ]] || continue
+        
+        local target_content="$(readlink "$dest_file")"
+        [[ -f "$target_content" ]] || continue
+        
+        rm "$dest_file"
+        cp "$target_content" "$dest_file"
+        echo "Ejected: $dest"
+    done < <(parse_config_files "$config_file")
+}
+
+create_default_config() {
+    local project_dir="$1"
+    
+    cat > "$project_dir/worktree-config.yml" << 'EOF'
+files:
+  - source: "shared-config/.env"
+    dest: ".env"
+  - source: "shared-config/.env.local"
+    dest: ".env.local"
+  - source: "shared-config/docker-compose.override.yml"
+    dest: "docker-compose.override.yml"
+EOF
+    
+    mkdir -p "$project_dir/shared-config"
+    echo "Created worktree-config.yml and shared-config/ directory"
+}
+
+bootstrap_project() {
+    local git_repo="$1"
+    local repo_name="$(basename "$git_repo" .git)"
+    
+    [[ ! -d "$repo_name" ]] || {
+        echo "Error: Directory '$repo_name' already exists" >&2
+        exit 1
+    }
+    
+    echo "Cloning repository..."
+    git clone --bare "$git_repo" "$repo_name.git"
+    
+    local project_dir="$PWD/$repo_name"
+    mkdir -p "$project_dir"
+    
+    echo "Setting up project structure..."
+    cd "$project_dir"
+    
+    local default_branch="$(git --git-dir="../$repo_name.git" symbolic-ref --short HEAD 2>/dev/null || echo "main")"
+    
+    git --git-dir="../$repo_name.git" worktree add "main" "$default_branch" 2>/dev/null || 
+        git --git-dir="../$repo_name.git" worktree add -b "main" "main"
+    
+    mv "../$repo_name.git" ".git"
+    
+    create_default_config "$project_dir"
+    
+    echo "Project bootstrapped at: $project_dir"
+    echo "Main worktree at: $project_dir/main"
+    echo "Edit worktree-config.yml and add files to shared-config/ as needed"
+}
+
+create_or_switch_worktree() {
+    local branch_name="$1"
+    
+    git rev-parse --git-dir > /dev/null 2>&1 || {
+        echo "Error: Not in a git repository" >&2
+        exit 1
+    }
+    
+    local project_root
+    if project_root="$(find_project_root)"; then
+        local worktree_path="$project_root/$branch_name"
     else
-        git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH"
+        local repo_root="$(git rev-parse --show-toplevel)"
+        local worktree_path="$repo_root/../$branch_name"
     fi
     
-    cd "$WORKTREE_PATH"
-    echo "Successfully created and switched to worktree: $WORKTREE_PATH"
-fi
+    if [[ -d "$worktree_path" ]]; then
+        echo "Worktree already exists at $worktree_path"
+        cd "$worktree_path"
+        return 0
+    fi
+    
+    echo "Creating new worktree for branch '$branch_name' at $worktree_path"
+    
+    if git show-ref --verify --quiet "refs/heads/$branch_name"; then
+        git worktree add "$worktree_path" "$branch_name"
+    elif git show-ref --verify --quiet "refs/remotes/origin/$branch_name"; then
+        git worktree add "$worktree_path" "origin/$branch_name"
+    else
+        git worktree add -b "$branch_name" "$worktree_path"
+    fi
+    
+    [[ -z "${project_root:-}" ]] || apply_config_symlinks "$project_root" "$worktree_path"
+    
+    cd "$worktree_path"
+    echo "Successfully created and switched to worktree: $worktree_path"
+}
+
+main() {
+    case "${1:-}" in
+        "boot")
+            [[ $# -eq 2 ]] || usage
+            bootstrap_project "$2"
+            ;;
+        "eject")
+            [[ $# -eq 1 ]] || usage
+            eject_config_files
+            ;;
+        "")
+            usage
+            ;;
+        *)
+            [[ $# -eq 1 ]] || usage
+            create_or_switch_worktree "$1"
+            ;;
+    esac
+}
+
+main "$@"
