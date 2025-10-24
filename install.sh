@@ -49,17 +49,21 @@ main() {
     log "Setting up Zsh configuration..."
     setup_zsh
     
-    # 2. Check for stow
+    # 2. Setup local scripts directory
+    log "Setting up local scripts directory..."
+    setup_local_scripts_dir
+    
+    # 3. Check for stow
     if ! command_exists stow; then
         warning "stow not found. Install it with: brew install stow"
         warning "Skipping stow package installation"
     else
-        # 3. Setup stow packages
+        # 4. Setup stow packages
         log "Setting up configuration files with stow..."
         setup_stow_packages
     fi
     
-    # 4. Optional: Install Brew packages
+    # 5. Optional: Install Brew packages
     if command_exists brew; then
         read -p "Install Brew packages from Brewfile? (y/N): " -n 1 -r
         echo
@@ -89,6 +93,13 @@ setup_zsh() {
     ln -sf ~/.zshrc ./live-zshrc-symlink
     
     success "Zsh configuration setup complete"
+}
+
+# Setup local scripts directory
+setup_local_scripts_dir() {
+    mkdir -p "$HOME/.local/bin"
+    success "Local scripts directory created at ~/.local/bin"
+    log "Private/local scripts can be placed in ~/.local/bin/ (not version controlled)"
 }
 
 # Setup stow packages for configuration files

@@ -20,7 +20,7 @@ do
 done
 
 # Add scripts directory to PATH for direct execution
-export PATH="${DOTFILES_DIR}/scripts:$PATH"
+export PATH="${DOTFILES_DIR}/scripts:$HOME/.local/bin:$PATH"
 
 export E="/volumes/External"
 export EHOME=$E/$HOME
