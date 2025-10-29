@@ -8,6 +8,7 @@ Usage:
   wt <branch-name>     Create or switch to worktree with config symlinks
   wt boot <git-repo>   Bootstrap project structure from git repository  
   wt eject             Convert symlinks to real files in current worktree
+  wt link <file>       Move file to shared config and create symlink
 EOF
     exit 1
 }
@@ -173,18 +174,151 @@ create_or_switch_worktree() {
     
     echo "Creating new worktree for branch '$branch_name' at $worktree_path"
     
+    # Fetch latest to ensure we see remote branches
+    git fetch origin 2>/dev/null || echo "Warning: Could not fetch from origin" >&2
+    
     if git show-ref --verify --quiet "refs/heads/$branch_name"; then
+        # Local branch exists - create worktree and pull if tracking
         git worktree add "$worktree_path" "$branch_name"
+        cd "$worktree_path"
+        if git rev-parse --abbrev-ref "$branch_name@{upstream}" >/dev/null 2>&1; then
+            echo "Pulling latest changes..."
+            git pull
+        fi
     elif git show-ref --verify --quiet "refs/remotes/origin/$branch_name"; then
-        git worktree add "$worktree_path" "origin/$branch_name"
+        # Remote branch exists - create tracking local branch
+        echo "Creating local tracking branch from origin/$branch_name"
+        git worktree add -b "$branch_name" "$worktree_path" "origin/$branch_name"
+        cd "$worktree_path"
+        git branch --set-upstream-to="origin/$branch_name" "$branch_name"
     else
+        # Create new branch
         git worktree add -b "$branch_name" "$worktree_path"
+        cd "$worktree_path"
     fi
     
     [[ -z "${project_root:-}" ]] || apply_config_symlinks "$project_root" "$worktree_path"
     
-    cd "$worktree_path"
     echo "Successfully created and switched to worktree: $worktree_path"
+}
+
+find_worktree_root() {
+    git rev-parse --show-toplevel 2>/dev/null || {
+        echo "Error: Not in a git worktree" >&2
+        return 1
+    }
+}
+
+generate_shared_config_filename() {
+    local original_path="$1"
+    local shared_config_dir="$2"
+    
+    local basename="$(basename "$original_path")"
+    local target_path="$shared_config_dir/$basename"
+    
+    # Handle naming conflicts by appending numbers
+    local counter=2
+    while [[ -e "$target_path" ]]; do
+        local name="${basename%.*}"
+        local ext="${basename##*.}"
+        if [[ "$name" == "$basename" ]]; then
+            # No extension
+            target_path="$shared_config_dir/${basename}.${counter}"
+        else
+            # Has extension
+            target_path="$shared_config_dir/${name}.${counter}.${ext}"
+        fi
+        ((counter++))
+    done
+    
+    echo "$target_path"
+}
+
+add_yaml_config_entry() {
+    local config_file="$1"
+    local source_path="$2" 
+    local dest_path="$3"
+    
+    yq eval ".files += [{\"source\": \"$source_path\", \"dest\": \"$dest_path\"}]" -i "$config_file" || {
+        echo "Error: Failed to update configuration file" >&2
+        return 1
+    }
+}
+
+link_file_to_shared_config() {
+    local file_path="$1"
+    
+    # Find project root
+    local project_root
+    project_root="$(find_project_root)" || {
+        echo "Error: Not in a worktree project (no worktree-config.yml found)" >&2
+        exit 1
+    }
+    
+    # Convert to absolute path if relative
+    if [[ "$file_path" != /* ]]; then
+        file_path="$PWD/$file_path"
+    fi
+    
+    # Validate file exists and is not a symlink
+    [[ -f "$file_path" ]] || {
+        echo "Error: File '$file_path' does not exist" >&2
+        exit 1
+    }
+    
+    [[ ! -L "$file_path" ]] || {
+        echo "Error: File '$file_path' is already a symlink" >&2
+        exit 1
+    }
+    
+    # Get worktree root and calculate relative path from worktree root
+    local worktree_root
+    worktree_root="$(find_worktree_root)" || exit 1
+    
+    # Calculate relative path from worktree root using pure bash
+    local relative_dest="${file_path#$worktree_root/}"
+    
+    # Check if this destination is already configured
+    local config_file="$project_root/worktree-config.yml"
+    if yq eval ".files[] | select(.dest == \"$relative_dest\") | .dest" "$config_file" 2>/dev/null | grep -q "$relative_dest"; then
+        echo "Error: File '$relative_dest' is already configured in shared config" >&2
+        exit 1
+    fi
+    
+    local shared_config_dir="$project_root/shared-config"
+    mkdir -p "$shared_config_dir"
+    
+    # Generate target filename in shared-config
+    local target_path
+    target_path="$(generate_shared_config_filename "$file_path" "$shared_config_dir")"
+    local target_basename="$(basename "$target_path")"
+    
+    # Move file to shared-config
+    mv "$file_path" "$target_path" || {
+        echo "Error: Failed to move file to shared-config" >&2
+        exit 1
+    }
+    
+    echo "Moved: $relative_dest -> shared-config/$target_basename"
+    
+    # Update YAML configuration
+    add_yaml_config_entry "$config_file" "shared-config/$target_basename" "$relative_dest" || {
+        # Rollback: move file back
+        mv "$target_path" "$file_path"
+        echo "Error: Failed to update configuration, file restored" >&2
+        exit 1
+    }
+    
+    # Create symlink back to original location
+    create_symlink "$target_path" "$relative_dest" "$worktree_root" || {
+        # Rollback: remove YAML entry and restore file
+        yq eval "del(.files[] | select(.dest == \"$relative_dest\"))" -i "$config_file"
+        mv "$target_path" "$file_path"
+        echo "Error: Failed to create symlink, changes reverted" >&2
+        exit 1
+    }
+    
+    echo "Added to shared config: $relative_dest"
 }
 
 main() {
@@ -196,6 +330,10 @@ main() {
         "eject")
             [[ $# -eq 1 ]] || usage
             eject_config_files
+            ;;
+        "link")
+            [[ $# -eq 2 ]] || usage
+            link_file_to_shared_config "$2"
             ;;
         "")
             usage

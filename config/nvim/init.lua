@@ -1,5 +1,5 @@
 --[[
-
+nd_
 =====================================================================
 ==================== READ THIS BEFORE CONTINUING ====================
 =====================================================================
@@ -432,7 +432,9 @@ require("lazy").setup({
 				--     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
 				--   },
 				-- },
-				-- pickers = {}
+				pickers = {
+					find_files = { find_command = { "rg", "--files", "--hidden", "-g", "!.git" } },
+				},
 				extensions = {
 					["ui-select"] = {
 						require("telescope.themes").get_dropdown(),
@@ -456,7 +458,7 @@ require("lazy").setup({
 			vim.keymap.set("n", "<leader>sr", builtin.resume, { desc = "[S]earch [R]esume" })
 			vim.keymap.set("n", "<leader>s.", builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
 			vim.keymap.set("n", "<leader><leader>", builtin.buffers, { desc = "[ ] Find existing buffers" })
-
+			vim.keymap.set("n", "<leader>gs", builtin.git_status, { desc = "[G]it [S]tatus" })
 			-- Slightly advanced example of overriding default behavior and theme
 			vim.keymap.set("n", "<leader>/", function()
 				-- You can pass additional configuration to Telescope to change the theme, layout, etc.
@@ -968,51 +970,51 @@ require("lazy").setup({
 			-- set use_icons to true if you have a Nerd Font
 			statusline.setup({ use_icons = vim.g.have_nerd_font })
 
-		-- You can configure sections in the statusline by overriding their
-		-- default behavior. For example, here we set the section for
-		-- cursor location to LINE:COLUMN
-		---@diagnostic disable-next-line: duplicate-set-field
-		statusline.section_location = function()
-			return "%2l:%-2v"
-		end
-
-		-- Remove git branch information
-		---@diagnostic disable-next-line: duplicate-set-field
-		statusline.section_git = function()
-			return ''
-		end
-
-		-- Show relative path from project root in filename section
-		---@diagnostic disable-next-line: duplicate-set-field
-		statusline.section_filename = function()
-			local filename = vim.fn.expand('%')
-			if filename == '' then
-				return '[No Name]'
+			-- You can configure sections in the statusline by overriding their
+			-- default behavior. For example, here we set the section for
+			-- cursor location to LINE:COLUMN
+			---@diagnostic disable-next-line: duplicate-set-field
+			statusline.section_location = function()
+				return "%2l:%-2v"
 			end
-			
-			-- Get relative path from git root or current working directory
-			local git_root = vim.fn.systemlist('git rev-parse --show-toplevel')[1]
-			local cwd = vim.fn.getcwd()
-			local root = (git_root and git_root ~= '' and vim.v.shell_error == 0) and git_root or cwd
-			
-			-- Make path relative to root
-			local relative_path = vim.fn.fnamemodify(filename, ':p')
-			if relative_path:find(root, 1, true) == 1 then
-				relative_path = relative_path:sub(#root + 2) -- +2 to remove trailing slash
-			else
-				relative_path = vim.fn.fnamemodify(filename, ':~')
-			end
-			
-			-- Add modified indicator if file is modified
-			local modified = vim.bo.modified and ' [+]' or ''
-			return relative_path .. modified
-		end
 
-		-- Remove file type and encoding info from right side
-		---@diagnostic disable-next-line: duplicate-set-field
-		statusline.section_fileinfo = function()
-			return ''
-		end
+			-- Remove git branch information
+			---@diagnostic disable-next-line: duplicate-set-field
+			statusline.section_git = function()
+				return ""
+			end
+
+			-- Show relative path from project root in filename section
+			---@diagnostic disable-next-line: duplicate-set-field
+			statusline.section_filename = function()
+				local filename = vim.fn.expand("%")
+				if filename == "" then
+					return "[No Name]"
+				end
+
+				-- Get relative path from git root or current working directory
+				local git_root = vim.fn.systemlist("git rev-parse --show-toplevel")[1]
+				local cwd = vim.fn.getcwd()
+				local root = (git_root and git_root ~= "" and vim.v.shell_error == 0) and git_root or cwd
+
+				-- Make path relative to root
+				local relative_path = vim.fn.fnamemodify(filename, ":p")
+				if relative_path:find(root, 1, true) == 1 then
+					relative_path = relative_path:sub(#root + 2) -- +2 to remove trailing slash
+				else
+					relative_path = vim.fn.fnamemodify(filename, ":~")
+				end
+
+				-- Add modified indicator if file is modified
+				local modified = vim.bo.modified and " [+]" or ""
+				return relative_path .. modified
+			end
+
+			-- Remove file type and encoding info from right side
+			---@diagnostic disable-next-line: duplicate-set-field
+			statusline.section_fileinfo = function()
+				return ""
+			end
 
 			-- ... and there is more!
 			--  Check out: https://github.com/echasnovski/mini.nvim
