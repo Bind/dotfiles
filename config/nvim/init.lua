@@ -90,6 +90,10 @@ P.S. You can delete this when you're done too. It's your config now! :)
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
+-- Disable netrw to let neo-tree handle directory browsing
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
 -- DS Bad Ideas
 -- Navigate vim panes better
 vim.keymap.set("n", "<c-k>", ":wincmd k<CR>")
@@ -917,6 +921,99 @@ require("lazy").setup({
 		config = function()
 			vim.cmd.colorscheme("catppuccin-mocha")
 		end,
+	},
+	{
+		"nvim-neo-tree/neo-tree.nvim",
+		branch = "v3.x",
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+			"MunifTanjim/nui.nvim",
+			"nvim-tree/nvim-web-devicons",
+		},
+		cmd = "Neotree",
+		keys = {
+			{ "<leader>e", "<cmd>Neotree toggle<cr>", desc = "Toggle file tree" },
+			{ "<leader>E", "<cmd>Neotree reveal<cr>", desc = "Reveal current file in tree" },
+		},
+		opts = {
+			close_if_last_window = true,
+			enable_git_status = true,
+			enable_diagnostics = true,
+			window = {
+				position = "right",
+				width = 30,
+				mapping_options = {
+					noremap = true,
+					nowait = true,
+				},
+				mappings = {
+					-- Standard vim navigation
+					["j"] = "next_sibling",
+					["k"] = "prev_sibling", 
+					["h"] = "close_node",
+					["l"] = "open",
+					
+					-- Use Enter for toggle instead of space
+					["<cr>"] = "toggle_node",
+					["<2-LeftMouse>"] = "open",
+					
+					-- File operations
+					["a"] = "add",
+					["A"] = "add_directory",
+					["d"] = "delete",
+					["r"] = "rename",
+					["c"] = "copy",
+					["m"] = "move",
+					["y"] = "copy_to_clipboard",
+					["x"] = "cut_to_clipboard",
+					["p"] = "paste_from_clipboard",
+					
+					-- Window control
+					["q"] = "close_window",
+					["?"] = "show_help",
+					["R"] = "refresh",
+					
+					-- Preserve your custom window navigation
+					["<c-h>"] = "none",
+					["<c-l>"] = "none",
+					["<c-j>"] = "none",
+					["<c-k>"] = "none",
+				},
+			},
+			filesystem = {
+				follow_current_file = {
+					enabled = true,
+					leave_dirs_open = false,
+				},
+				hijack_netrw_behavior = "open_default",
+				filtered_items = {
+					visible = false,
+					hide_dotfiles = true,
+					hide_gitignored = true,
+					hide_by_name = {
+						"node_modules",
+						".git",
+						".DS_Store",
+					},
+				},
+				use_libuv_file_watcher = true,
+			},
+			default_component_configs = {
+				git_status = {
+					symbols = {
+						added = "✚",
+						modified = "",
+						deleted = "✖",
+						renamed = "󰁕",
+						untracked = "",
+						ignored = "",
+						unstaged = "󰄱",
+						staged = "",
+						conflict = "",
+					},
+				},
+			},
+		},
 	},
 	{ -- You can easily change to a different colorscheme.
 		-- Change the name of the colorscheme plugin below, and then
