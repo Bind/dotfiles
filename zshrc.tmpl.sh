@@ -25,3 +25,5 @@ export PATH="${DOTFILES_DIR}/scripts:$HOME/.local/bin:$PATH"
 export E="/volumes/External"
 export EHOME=$E/$HOME
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+export EDITOR="nvim"
+export VISUAL="nvim"
