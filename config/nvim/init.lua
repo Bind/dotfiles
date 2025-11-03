@@ -199,6 +199,9 @@ vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 -- Diagnostic keymaps
 vim.keymap.set("n", "<leader>q", vim.diagnostic.setloclist, { desc = "Open diagnostic [Q]uickfix list" })
 
+-- Buffer management
+vim.keymap.set("n", "<leader>n", "<cmd>enew<cr>", { desc = "[N]ew buffer" })
+
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
 -- is not what someone will guess without a bit more experience.
@@ -368,9 +371,13 @@ require("lazy").setup({
 
 			-- Document existing key chains
 			spec = {
-				{ "<leader>s", group = "[S]earch" },
+				{ "<leader>s", group = "[S]earch/[S]ession" },
 				{ "<leader>t", group = "[T]oggle" },
-				{ "<leader>h", group = "Git [H]unk", mode = { "n", "v" } },
+				{ "<leader>h", group = "[H]arpoon" },
+				{ "<leader>1", hidden = true },
+				{ "<leader>2", hidden = true },
+				{ "<leader>3", hidden = true },
+				{ "<leader>4", hidden = true },
 			},
 		},
 	},
@@ -1117,6 +1124,93 @@ require("lazy").setup({
 			--  Check out: https://github.com/echasnovski/mini.nvim
 		end,
 	},
+
+	{ -- Auto Session: Automatic session management per directory/worktree
+		"rmagatti/auto-session",
+		config = function()
+			require("auto-session").setup({
+				-- Enable automatic session management
+				auto_session_enabled = true,
+				auto_save_enabled = true,
+				auto_restore_enabled = true,
+				auto_session_create_enabled = true,
+				
+				-- Session directory (stored in nvim data directory)
+				auto_session_root_dir = vim.fn.stdpath("data") .. "/sessions/",
+				
+				-- Suppress session create/restore messages
+				auto_session_suppress_dirs = { "~/", "~/Downloads", "/tmp" },
+				
+				-- Pre and post session hooks
+				pre_save_cmds = {
+					"Neotree close", -- Close neo-tree before saving session
+				},
+				post_restore_cmds = {
+					"Neotree filesystem reveal", -- Re-open neo-tree after restore if needed
+				},
+				
+				-- Session lens integration for telescope (optional)
+				session_lens = {
+					buftypes_to_ignore = {},
+					load_on_setup = true,
+					theme_conf = { border = true },
+					previewer = false,
+				},
+			})
+
+			-- Session management keymaps
+			vim.keymap.set("n", "<leader>ss", "<cmd>SessionSave<cr>", { desc = "[S]ession [S]ave" })
+			vim.keymap.set("n", "<leader>sr", "<cmd>SessionRestore<cr>", { desc = "[S]ession [R]estore" })
+			vim.keymap.set("n", "<leader>sd", "<cmd>SessionDelete<cr>", { desc = "[S]ession [D]elete" })
+			vim.keymap.set("n", "<leader>sf", "<cmd>SessionSearch<cr>", { desc = "[S]ession [F]ind" })
+		end,
+	},
+
+	{ -- Harpoon 2: File navigation and quick switching
+		"ThePrimeagen/harpoon",
+		branch = "harpoon2",
+		dependencies = { "nvim-lua/plenary.nvim" },
+		config = function()
+			local harpoon = require("harpoon")
+			
+			-- REQUIRED: Initialize harpoon
+			harpoon:setup()
+			
+			-- Basic telescope configuration for harpoon
+			local conf = require("telescope.config").values
+			local function toggle_telescope(harpoon_files)
+				local file_paths = {}
+				for _, item in ipairs(harpoon_files.items) do
+					table.insert(file_paths, item.value)
+				end
+
+				require("telescope.pickers").new({}, {
+					prompt_title = "Harpoon",
+					finder = require("telescope.finders").new_table({
+						results = file_paths,
+					}),
+					previewer = conf.file_previewer({}),
+					sorter = conf.generic_sorter({}),
+				}):find()
+			end
+
+			-- Harpoon keymaps
+			vim.keymap.set("n", "<leader>ha", function() harpoon:list():add() end, { desc = "[H]arpoon [A]dd file" })
+			vim.keymap.set("n", "<leader>hh", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, { desc = "[H]arpoon toggle menu" })
+			vim.keymap.set("n", "<leader>ht", function() toggle_telescope(harpoon:list()) end, { desc = "[H]arpoon [T]elescope" })
+
+			-- Quick navigation to specific files
+			vim.keymap.set("n", "<leader>1", function() harpoon:list():select(1) end, { desc = "File 1" })
+			vim.keymap.set("n", "<leader>2", function() harpoon:list():select(2) end, { desc = "File 2" })
+			vim.keymap.set("n", "<leader>3", function() harpoon:list():select(3) end, { desc = "File 3" })
+			vim.keymap.set("n", "<leader>4", function() harpoon:list():select(4) end, { desc = "File 4" })
+
+			-- Toggle previous & next buffers stored within Harpoon list
+			vim.keymap.set("n", "<C-S-P>", function() harpoon:list():prev() end, { desc = "Harpoon previous" })
+			vim.keymap.set("n", "<C-S-N>", function() harpoon:list():next() end, { desc = "Harpoon next" })
+		end,
+	},
+
 	{ -- Highlight, edit, and navigate code
 		"nvim-treesitter/nvim-treesitter",
 		build = ":TSUpdate",
