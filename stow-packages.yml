@@ -7,3 +7,5 @@ packages:
     target: "$HOME/.config/tmux"
   opencode:
     target: "$HOME/.config/opencode"
+  lazygit:
+    target: "$HOME/.config/lazygit"

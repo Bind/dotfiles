@@ -27,3 +27,9 @@ export EHOME=$E/$HOME
 export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
 export EDITOR="nvim"
 export VISUAL="nvim"
+export XDG_CONFIG_HOME="$HOME/.config"
+
+# GitButler CLI completions
+if command -v but >/dev/null 2>&1; then
+  eval "$(but completions zsh)"
+fi
