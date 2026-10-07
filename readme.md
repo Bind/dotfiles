@@ -65,3 +65,9 @@ stow -t ~/.config/opencode -D opencode
 ├── stow-packages.yml   # Stow package configuration
 └── Brewfile           # Package dependencies
 ```
+
+## Bootstrap a Mac for Binder services
+
+Use [packages/mac-machine](packages/mac-machine/README.md) to install the service
+toolset, clone Sutro, transfer dotenvx keys with age encryption over Tailscale, and
+connect to the remote Executor through Cloudflare Access.

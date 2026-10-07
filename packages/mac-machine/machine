@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# Bootstrap a Mac and move explicitly selected dotenvx keys over Taildrop.
+set -euo pipefail
+umask 077
+package_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+identity_dir="$HOME/.config/binder-machine"
+identity="$identity_dir/age.identity"
+work=''
+trap '[[ -z "$work" ]] || rm -rf "$work"' EXIT
+fail() { echo "$*" >&2; exit 1; }
+need() { command -v "$1" >/dev/null || fail "Required command: $1"; }
+ts() {
+  if command -v tailscale >/dev/null; then tailscale "$@"
+  elif [[ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]]; then
+    TAILSCALE_BE_CLI=1 /Applications/Tailscale.app/Contents/MacOS/Tailscale "$@"
+  else fail 'Install and sign into Tailscale first.'; fi
+}
+repo() {
+  [[ -d "$1/.git" ]] || fail 'Expected a Git checkout.'
+  local remote
+  remote="$(git -C "$1" remote get-url origin)"
+  case "$remote" in
+    https://github.com/Bind/Sutro.git|https://github.com/Bind/Sutro|git@github.com:Bind/Sutro.git|https://github.com/bind/sutro.git) ;;
+    *) fail 'Only the Bind/Sutro checkout is supported.' ;;
+  esac
+}
+keys_destination() {
+  repo "$1"
+  git -C "$1" check-ignore -q .env.keys || fail '.env.keys must be ignored by Git.'
+  if git -C "$1" ls-files --error-unmatch .env.keys >/dev/null 2>&1; then
+    fail 'Refusing a tracked .env.keys.'
+  fi
+  [[ ! -e "$1/.env.keys" && ! -L "$1/.env.keys" ]] || fail '.env.keys already exists; refusing to replace it.'
+}
+validate_keys() {
+  [[ -f "$1" && ! -L "$1" && -s "$1" ]] || fail 'Expected a nonempty regular .env.keys file.'
+  # Accept dotenvx private-key assignments only; never source or print their values.
+  awk '
+    /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    {
+      line=$0; sub(/\r$/, "", line)
+      separator=index(line, "=")
+      name=substr(line, 1, separator-1); value=substr(line, separator+1)
+      if (name !~ /^DOTENV_PRIVATE_KEY(_[A-Z0-9_]+)?$/ || names[name]++) exit 1
+      if (value ~ /^".*"$/) value=substr(value, 2, length(value)-2)
+      if (length(value)!=64 || value !~ /^[0-9a-fA-F]+$/) exit 1
+      count++
+    }
+    END { if (!count) exit 1 }
+  ' "$1" || fail 'File must contain only dotenvx private keys, comments and blank lines.'
+}
+check_keys() {
+  repo "$1"
+  git -C "$1" check-ignore -q .env.keys || fail '.env.keys must be ignored by Git.'
+  [[ "$(stat -f '%Lp' "$1/.env.keys")" == 600 ]] || fail '.env.keys must have mode 600.'
+  validate_keys "$1/.env.keys"
+}
+with_env() {
+  local checkout="$1" script="$2"
+  check_keys "$checkout"
+  need mise
+  (cd "$checkout"; mise exec -- ./node_modules/.bin/dotenvx run --quiet --strict -f .env -- node "$package_dir/$script")
+}
+usage() {
+  cat <<'HELP'
+machine setup                         Show the first numbered setup step
+machine recipient                     Generate/display this Mac's public age recipient
+machine send <key-file> <recipient> <tailscale-device>
+machine receive <encrypted-file> <checkout>   Install .env.keys without overwriting
+machine executor                      Show the Executor setup handoff
+machine verify-env <checkout>         Verify decryption without exposing credentials
+machine doctor <checkout>             Check keys, decryption, Tailscale, remote API
+HELP
+}
+case "${1:-help}" in
+  setup)
+    echo 'Run the numbered steps individually; each prints what to do next.'
+    printf 'Start on the NEW Mac: %q\n' "$package_dir/01-tools.sh"
+    ;;
+  tailscale-status)
+    ts status --json
+    ;;
+  recipient)
+    [[ $# == 1 ]] || fail 'Usage: machine recipient'
+    need age-keygen
+    [[ ! -L "$identity_dir" && ! -L "$identity" ]] || fail 'Refusing symlinked identity storage.'
+    mkdir -p "$identity_dir"
+    chmod 700 "$identity_dir"
+    if [[ ! -e "$identity" ]]; then age-keygen -o "$identity"; fi
+    chmod 600 "$identity"
+    age-keygen -y "$identity"
+    ;;
+  send)
+    [[ $# == 4 ]] || fail 'Usage: machine send <key-file> <recipient> <tailscale-device>'
+    need age
+    need jq
+    [[ "$(basename "$2")" == .env.keys ]] || fail 'Only a file named .env.keys may be transferred.'
+    validate_keys "$2"
+    [[ "$(stat -f '%Lp' "$2")" == 600 ]] || fail 'Source .env.keys must have mode 600.'
+    [[ "$3" =~ ^age1[0-9a-z]+$ && "$4" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]] || fail 'Expected an age recipient and a Tailscale hostname or IPv4 address.'
+    status="$(ts status --json)"
+    peer="$(printf '%s' "$status" | jq -ce --arg destination "$4" '
+      .Self.UserID as $owner |
+      select(.BackendState == "Running" and $owner != null and $owner != 0) |
+      [.Peer[]? | select(
+        .UserID == $owner and .Online == true and ((.Tags // []) | length) == 0 and
+        (.HostName == $destination or (.DNSName | rtrimstr(".")) == ($destination | rtrimstr(".")) or
+         ((.TailscaleIPs // []) | index($destination)) != null)
+      )] | select(length == 1) | .[0]
+    ')" || fail 'Destination must be one online, untagged device owned by your Tailscale account.'
+    destination="$(printf '%s' "$peer" | jq -r '.TailscaleIPs[0]')"
+    echo "Source: $2"
+    echo "Recipient: $3"
+    echo "Destination: $4 ($destination), owned by your Tailscale account."
+    echo 'Compare the recipient with step 4 on the new Mac before continuing.'
+    read -r -p "Type the full age recipient above to authorize this transfer: " confirmation
+    [[ "$confirmation" == "$3" ]] || fail 'Recipient confirmation did not match; nothing sent.'
+    work="$(mktemp -d)"
+    age -r "$3" -o "$work/sutro-keys.age" "$2"
+    ts file cp "$work/sutro-keys.age" "$destination:"
+    echo 'Encrypted keys sent. Import sutro-keys.age on the destination Mac.'
+    ;;
+  receive)
+    [[ $# == 3 ]] || fail 'Usage: machine receive <encrypted-file> <checkout>'
+    need age
+    [[ -f "$2" && ! -L "$2" ]] || fail 'Expected a regular encrypted file.'
+    [[ -f "$identity" && ! -L "$identity" && ! -L "$identity_dir" ]] || fail 'Run recipient on this Mac first.'
+    keys_destination "$3"
+    work="$(mktemp -d "$3/.machine-import.XXXXXX")"
+    if ! age -d -i "$identity" -o "$work/keys" "$2" 2>"$work/decrypt-error"; then
+      fail 'Cannot decrypt this file. Check the downloaded ciphertext and the receiving Mac identity.'
+    fi
+    validate_keys "$work/keys"
+    # Hard-link publication is atomic and fails if the destination appeared meanwhile.
+    chmod 600 "$work/keys"
+    ln "$work/keys" "$3/.env.keys"
+    echo 'Installed .env.keys with mode 600. Remove the encrypted download when finished.'
+    ;;
+  verify-env)
+    [[ $# == 2 ]] || fail 'Usage: machine verify-env <checkout>'
+    with_env "$2" verify-env.cjs
+    ;;
+  executor)
+    echo 'Next: run 06-executor.sh to install/open the app. Hosted connection setup is handled in the Executor chat.'
+    ;;
+  doctor)
+    [[ $# == 2 ]] || fail 'Usage: machine doctor <checkout>'
+    repo "$2"
+    [[ -f "$2/.env.keys" && ! -L "$2/.env.keys" ]] || fail 'Missing regular .env.keys.'
+    [[ "$(stat -f '%Lp' "$2/.env.keys")" == 600 ]] || fail '.env.keys must have mode 600.'
+    ts status >/dev/null
+    # Credentials stay in the subprocess environment and request headers, never argv/output.
+    with_env "$2" probe.cjs
+    ;;
+  help|--help|-h) usage ;;
+  *) usage >&2; exit 2 ;;
+esac

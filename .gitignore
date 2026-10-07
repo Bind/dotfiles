@@ -1,1 +1,14 @@
 live-zshrc-symlink
+.env.keys
+.env.keys.*
+*.age
+.machine-import.*/
+
+# Local credentials and transfer identities must never enter this public repo.
+.env
+.env.*
+!.env.example
+*.identity
+*.pem
+*.key
+.DS_Store
